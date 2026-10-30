@@ -4,33 +4,59 @@ import FilePreview from '../../components/FilePreview'
 import DownloadButton from '../../components/DownloadButton'
 import StatusBanner from '../../components/StatusBanner'
 import ProgressBar from '../../components/ProgressBar'
-import { removeImageBackground } from '../image/removeBackground'
+import { SegmentedControl } from '../../components/calcParts'
+import { getCutoutCanvas, compositeOnColor, canvasToBlob, BG_MODELS } from '../image/removeBackground'
 import { validateFile, createObjectURL, revokeObjectURL, friendlyErrorMessage, MAX_FILE_SIZE } from '../../utils/fileUtils'
 import { downloadBlob, suggestOutputName } from '../../utils/downloadUtils'
 
 const ACCEPT = ['image/jpeg', 'image/png', 'image/webp']
-const CHECKERBOARD_BG = {
-  backgroundImage:
-    'linear-gradient(45deg, #e5e7eb 25%, transparent 25%), linear-gradient(-45deg, #e5e7eb 25%, transparent 25%), linear-gradient(45deg, transparent 75%, #e5e7eb 75%), linear-gradient(-45deg, transparent 75%, #e5e7eb 75%)',
+const CHECKER = {
+  backgroundImage: 'conic-gradient(#e9ebf5 25%, #fff 0 50%, #e9ebf5 0 75%, #fff 0)',
   backgroundSize: '20px 20px',
-  backgroundPosition: '0 0, 0 10px, 10px -10px, -10px 0px',
 }
+const SWATCHES = [
+  { value: 'transparent', label: 'Transparent' },
+  { value: '#ffffff', label: 'White' },
+  { value: '#d9e8fb', label: 'Light blue' },
+  { value: '#f2f2f2', label: 'Light grey' },
+  { value: 'custom', label: 'Colour…' },
+]
 
 export default function BackgroundRemoverTool() {
   const [file, setFile] = useState(null)
   const [previewUrl, setPreviewUrl] = useState(null)
+  const [model, setModel] = useState('quality')
+  const [bg, setBg] = useState('transparent')
+  const [customColor, setCustomColor] = useState('#ff6b6b')
   const [processing, setProcessing] = useState(false)
-  const [progress, setProgress] = useState(0)
-  const [progressLabel, setProgressLabel] = useState('')
-  const [result, setResult] = useState(null)
+  const [progress, setProgress] = useState({ percent: 0, label: '' })
+  const [cutout, setCutout] = useState(null) // canvas
+  const [resultUrl, setResultUrl] = useState(null)
+  const [showOriginal, setShowOriginal] = useState(false)
   const [error, setError] = useState(null)
-  const resultUrlRef = useRef(null)
+  const urlRef = useRef(null)
 
+  const fillColor = bg === 'custom' ? customColor : bg
+
+  // Rebuild the preview whenever the cut-out or the chosen background changes.
   useEffect(() => {
+    if (!cutout) return undefined
+    let cancelled = false
+    const canvas = fillColor === 'transparent' ? cutout : compositeOnColor(cutout, fillColor)
+    canvasToBlob(canvas, 'image/png').then((blob) => {
+      if (cancelled) return
+      revokeObjectURL(urlRef.current)
+      urlRef.current = createObjectURL(blob)
+      setResultUrl(urlRef.current)
+    })
     return () => {
-      revokeObjectURL(previewUrl)
-      revokeObjectURL(resultUrlRef.current)
+      cancelled = true
     }
+  }, [cutout, fillColor])
+
+  useEffect(() => () => {
+    revokeObjectURL(previewUrl)
+    revokeObjectURL(urlRef.current)
   }, [previewUrl])
 
   const handleFiles = (files) => {
@@ -41,54 +67,54 @@ export default function BackgroundRemoverTool() {
       return
     }
     setError(null)
-    setResult(null)
-    revokeObjectURL(previewUrl)
+    setCutout(null)
+    setResultUrl(null)
+    setShowOriginal(false)
     setFile(f)
     setPreviewUrl(createObjectURL(f))
   }
 
-  const handleRemove = async () => {
-    if (!file) return
+  const reset = () => {
+    setFile(null)
+    setPreviewUrl(null)
+    setCutout(null)
+    setResultUrl(null)
+    setError(null)
+  }
+
+  const run = async () => {
     setProcessing(true)
     setError(null)
-    setProgress(0)
-    setProgressLabel('Starting…')
+    setProgress({ percent: 0, label: 'Starting…' })
     try {
-      const blob = await removeImageBackground(file, {
-        onProgress: (key, current, total) => {
-          setProgressLabel(key.includes('fetch') ? 'Downloading AI model…' : 'Processing image…')
-          setProgress(total ? (current / total) * 100 : 0)
+      const canvas = await getCutoutCanvas(file, {
+        model,
+        onProgress: ({ stage, percent }) => {
+          const label =
+            stage === 'download' ? `Downloading the AI model (${BG_MODELS[model].sizeMB} MB, first time only)…` : stage === 'prepare' ? 'Starting the AI model…' : 'Cutting out the subject…'
+          setProgress({ percent: stage === 'run' ? 100 : percent, label })
         },
       })
-      revokeObjectURL(resultUrlRef.current)
-      const url = createObjectURL(blob)
-      resultUrlRef.current = url
-      setResult({ blob, url })
+      setCutout(canvas)
+      setShowOriginal(false)
     } catch (err) {
-      setError(err.message || friendlyErrorMessage(err))
+      setError(err?.code === 'MODEL_MISSING' ? err.message : friendlyErrorMessage(err))
     } finally {
       setProcessing(false)
     }
   }
 
-  const handleDownload = () => {
-    if (!result || !file) return
-    downloadBlob(result.blob, suggestOutputName(file.name, { suffix: '-no-bg', newExt: '.png' }))
-  }
-
-  const reset = () => {
-    revokeObjectURL(previewUrl)
-    revokeObjectURL(resultUrlRef.current)
-    setFile(null)
-    setPreviewUrl(null)
-    setResult(null)
-    setError(null)
+  const download = async () => {
+    const transparent = fillColor === 'transparent'
+    const canvas = transparent ? cutout : compositeOnColor(cutout, fillColor)
+    const blob = await canvasToBlob(canvas, transparent ? 'image/png' : 'image/jpeg', 0.95)
+    downloadBlob(blob, suggestOutputName(file.name, { suffix: '-no-bg', newExt: transparent ? '.png' : '.jpg' }))
   }
 
   if (!file) {
     return (
       <div>
-        <UploadDropzone accept={ACCEPT} acceptLabel="an image (JPG, PNG or WebP)" maxSize={MAX_FILE_SIZE} onFiles={handleFiles} />
+        <UploadDropzone accept={ACCEPT} acceptLabel="a photo (JPG, PNG or WebP)" maxSize={MAX_FILE_SIZE} onFiles={handleFiles} />
         {error && (
           <div className="mt-4">
             <StatusBanner type="error">{error}</StatusBanner>
@@ -98,57 +124,95 @@ export default function BackgroundRemoverTool() {
     )
   }
 
+  const shown = cutout && !showOriginal ? resultUrl || previewUrl : previewUrl
+
   return (
     <div className="grid gap-6 lg:grid-cols-[1.1fr_1fr]">
       <div>
-        <div className="overflow-hidden rounded-2xl border border-line" style={result ? CHECKERBOARD_BG : { background: '#f4f4f5' }}>
-          <img
-            src={result ? result.url : previewUrl}
-            alt={result ? 'Image with background removed' : 'Preview of the uploaded image'}
-            className="max-h-[420px] w-full object-contain"
-          />
+        <div className="overflow-hidden rounded-2xl border border-line" style={cutout && !showOriginal && fillColor === 'transparent' ? CHECKER : { background: '#f4f4f5' }}>
+          <img src={shown} alt={cutout && !showOriginal ? 'Photo with the background removed' : 'Your original photo'} className="mx-auto max-h-[460px] w-full object-contain" />
         </div>
-        <div className="mt-3">
+        {cutout && (
+          <div className="mt-3">
+            <SegmentedControl
+              options={[
+                { value: false, label: 'Result' },
+                { value: true, label: 'Original' },
+              ]}
+              value={showOriginal}
+              onChange={setShowOriginal}
+            />
+          </div>
+        )}
+        <ul className="mt-3">
           <FilePreview name={file.name} size={file.size} previewUrl={previewUrl} onRemove={reset} />
-        </div>
+        </ul>
       </div>
 
-      <div className="rounded-2xl border border-line bg-white p-5">
-        <h2 className="font-display text-lg font-semibold text-ink">Remove background</h2>
-        <p className="mt-2 text-sm text-ink-soft">
-          Uses a small on-device AI model to cut out the subject and make the background transparent. The model
-          downloads once (a few MB) and is cached by your browser for next time — your photo is never uploaded.
-        </p>
-
-        {processing && (
-          <div className="mt-4">
-            <ProgressBar value={progress} label={progressLabel} />
-          </div>
-        )}
-
-        {error && (
-          <div className="mt-4">
-            <StatusBanner type="error">{error}</StatusBanner>
-          </div>
-        )}
-        {result && !error && (
-          <div className="mt-4">
-            <StatusBanner type="success">Done! Background removed — download as a transparent PNG.</StatusBanner>
-          </div>
-        )}
-
-        <div className="mt-5 flex flex-col gap-3 sm:flex-row">
-          <button
-            type="button"
-            onClick={handleRemove}
-            disabled={processing}
-            className="inline-flex flex-1 items-center justify-center rounded-xl px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition-opacity disabled:opacity-60"
-            style={{ background: 'linear-gradient(90deg, var(--color-brand-600), var(--color-brand-500))' }}
-          >
-            {processing ? 'Removing…' : result ? 'Run Again' : 'Remove Background'}
-          </button>
-          {result && <DownloadButton label="Download PNG" onClick={handleDownload} />}
+      <div className="space-y-5 rounded-2xl border border-line bg-white p-5">
+        <div>
+          <h2 className="font-display text-lg font-semibold text-ink">Remove background</h2>
+          <p className="mt-1 text-sm text-ink-soft">An AI model runs on your device, so your photo is never uploaded. Full resolution, no watermark, no limits.</p>
         </div>
+
+        <div>
+          <p className="mb-1.5 text-sm font-medium text-ink">Quality</p>
+          <div role="radiogroup" aria-label="Quality" className="grid gap-2">
+            {Object.values(BG_MODELS).map((m) => (
+              <label
+                key={m.id}
+                className={`flex cursor-pointer items-center justify-between rounded-xl border p-3 text-sm transition-colors ${model === m.id ? 'border-[var(--color-brand-500)] bg-brand-50' : 'border-line'}`}
+              >
+                <span>
+                  <span className="block font-medium text-ink">
+                    {m.label} <span className="font-normal text-ink-soft">· {m.sizeMB} MB download</span>
+                  </span>
+                  <span className="block text-xs text-ink-soft">{m.hint}</span>
+                </span>
+                <input
+                  type="radio"
+                  name="bg-model"
+                  checked={model === m.id}
+                  disabled={processing}
+                  onChange={() => {
+                    setModel(m.id)
+                    setCutout(null)
+                    setResultUrl(null)
+                  }}
+                  className="accent-[var(--color-brand-500)]"
+                />
+              </label>
+            ))}
+          </div>
+          <p className="mt-2 text-xs text-ink-soft">The model downloads once and is remembered by your browser.</p>
+        </div>
+
+        {processing && <ProgressBar value={progress.percent} label={progress.label} />}
+        {error && <StatusBanner type="error">{error}</StatusBanner>}
+
+        <button
+          type="button"
+          onClick={run}
+          disabled={processing}
+          className="inline-flex w-full items-center justify-center rounded-xl px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition-opacity disabled:opacity-60"
+          style={{ background: 'linear-gradient(90deg, var(--color-brand-600), var(--color-brand-500))' }}
+        >
+          {processing ? 'Removing…' : cutout ? 'Run again' : 'Remove background'}
+        </button>
+
+        {cutout && (
+          <div className="space-y-4 border-t border-line pt-5">
+            <StatusBanner type="success">Done! Pick a background and download.</StatusBanner>
+            <SegmentedControl label="Background" options={SWATCHES} value={bg} onChange={setBg} />
+            {bg === 'custom' && (
+              <div className="flex items-center gap-3">
+                <input type="color" value={customColor} onChange={(e) => setCustomColor(e.target.value)} aria-label="Background colour" className="h-10 w-14 cursor-pointer rounded-lg border border-line" />
+                <span className="font-mono text-sm text-ink-soft">{customColor}</span>
+              </div>
+            )}
+            <DownloadButton label={fillColor === 'transparent' ? 'Download transparent PNG' : 'Download JPG'} onClick={download} />
+          </div>
+        )}
       </div>
     </div>
   )
