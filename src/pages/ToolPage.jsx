@@ -35,6 +35,31 @@ const FEATURES = [
 ]
 
 const FAQS = {
+  'photo-signature-resizer': [
+    { q: 'Can it reach a minimum file size, like 20–50 KB?', a: 'Yes. It first finds the best quality under your maximum, and if the file is still below your minimum it adds invisible padding data, so the picture is unchanged but the file reaches the minimum your portal checks.' },
+    { q: 'Are the exam sizes in the presets official?', a: 'They are starting points taken from recent notices and widely reported specifications. Requirements change every year and websites often disagree, so always compare with your exam’s official notification — every value can be edited.' },
+    { q: 'What does “name and date strip” do?', a: 'Some forms want your name and the date the photo was taken printed on a white bar at the bottom of the photo. Tick the option, type your name, and it is added for you.' },
+    { q: 'Is my photo uploaded anywhere?', a: 'No. Resizing, compressing and the optional background change all happen in your browser, so your photo and signature never leave your device.' },
+    { q: 'Why do some exams ask for a live photo?', a: 'Some recent notices (for example SSC) have the photo captured live inside the application form instead of uploaded. Check your notice — you may only need to upload a signature.' },
+  ],
+  'passport-photo-maker': [
+    { q: 'What size is a passport photo?', a: 'Common sizes are 35×45 mm (India, UK, EU/Schengen, Australia and many others), 2×2 in / 51×51 mm (US), 50×70 mm (Canada) and 33×48 mm (China visa). Always check the current rules for your country.' },
+    { q: 'How do I print it?', a: 'Download the sheet as JPG or PDF and print it at 100% (“actual size”, no fit-to-page scaling) on photo paper. A 4×6 in sheet holds 8 photos of 35×45 mm. Cutting guides are included.' },
+    { q: 'Will the white background be accepted?', a: 'The AI cut-out works well on most portraits but can struggle with hair edges and busy backgrounds. Check the result at full size, and take the photo against a plain, evenly lit wall for best results.' },
+    { q: 'Is my photo uploaded?', a: 'No. The photo and the AI model run on your device, so your picture never leaves your browser.' },
+  ],
+  'background-remover': [
+    { q: 'Is there a size limit or a watermark?', a: 'No watermark, no signup and no daily limit. The result is downloaded at your photo’s full resolution (up to 4096 px on the longest side).' },
+    { q: 'What is the difference between Best quality and Fast?', a: 'Best quality is a larger AI model (about 44 MB) that handles arms, hair and bags more cleanly. Fast is a small model (about 4.5 MB) that is quicker to download and fine for simple photos and products. The model downloads once and is remembered by your browser.' },
+    { q: 'Is my photo uploaded?', a: 'No. The AI runs inside your browser, so the photo never leaves your device.' },
+    { q: 'Can I get a white or coloured background instead of transparent?', a: 'Yes. After removing the background, choose white, light blue, light grey or any colour, and download it as a JPG; choose Transparent to keep a PNG.' },
+  ],
+  'compress-pdf': [
+    { q: 'Will my text still be selectable after compressing?', a: 'Yes, by default. FileSwift compresses only the photos and scans inside the PDF and leaves text and vector graphics alone. Only if a target size can’t be reached that way (or if you choose Maximum compression) are pages converted to images, and you are told when that happens.' },
+    { q: 'Why can’t some PDFs get much smaller?', a: 'A PDF that is mostly text is already small, and PDFs whose images are stored in other formats can’t be recompressed without flattening. Try the target-size option or Maximum compression for those.' },
+    { q: 'Is there a daily limit or a watermark?', a: 'No. There are no limits, no watermarks and no signup, and your file never leaves your device.' },
+    { q: 'Which size limits do forms usually ask for?', a: 'Government and exam portals commonly ask for PDFs under 100 KB, 200 KB, 300 KB or 500 KB. Choose the matching target or type your own — and always check the size and format rules on the official notice.' },
+  ],
   'compress-image-to-size': [
     { q: 'How does it reach an exact size?', a: 'FileSwift searches for the highest JPG/WebP quality whose file size still fits under your target. If even the lowest quality is too big, it also reduces the image dimensions a little until it fits.' },
     { q: 'Why is my result a bit smaller than the target?', a: 'The goal is the largest file that is still under your limit, so the result is usually just below it (for example 48 KB for a 50 KB target). Sizes are measured with 1 KB = 1,024 bytes, the way most upload portals count.' },
