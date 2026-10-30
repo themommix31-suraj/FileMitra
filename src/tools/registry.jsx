@@ -51,6 +51,11 @@ const EmiCalculatorTool = lazy(() => import('./ui/EmiCalculatorTool.jsx'))
 const CaseConverterTool = lazy(() => import('./ui/CaseConverterTool.jsx'))
 const RemoveDuplicateLinesTool = lazy(() => import('./ui/RemoveDuplicateLinesTool.jsx'))
 
+const BackgroundRemoverTool = lazy(() => import('./ui/BackgroundRemoverTool.jsx'))
+
+const ExamPhotoTool = lazy(() => import('./ui/ExamPhotoTool.jsx'))
+const PassportPhotoTool = lazy(() => import('./ui/PassportPhotoTool.jsx'))
+
 // Maps a tool slug to the component that renders its working UI, plus any
 // fixed props that component needs. Add a new working tool by adding one
 // line here (after implementing its logic in tools/<category>/ and, if
@@ -76,6 +81,14 @@ export const toolRegistry = {
   'image-to-text': { Component: ImageToTextTool },
   'svg-to-png': { Component: SvgToPngTool },
   'favicon-generator': { Component: FaviconGeneratorTool },
+  'background-remover': { Component: BackgroundRemoverTool },
+  'photo-signature-resizer': { Component: ExamPhotoTool },
+  'neet-photo-signature-resizer': { Component: ExamPhotoTool, props: { exam: 'neet' } },
+  'jee-main-photo-signature-resizer': { Component: ExamPhotoTool, props: { exam: 'jee' } },
+  'ibps-photo-signature-resizer': { Component: ExamPhotoTool, props: { exam: 'bank' } },
+  'ssc-signature-resizer': { Component: ExamPhotoTool, props: { exam: 'bank', startKind: 'signature' } },
+  'passport-photo-maker': { Component: PassportPhotoTool },
+  'india-passport-size-photo-maker': { Component: PassportPhotoTool, props: { presetId: '35x45' } },
   'crop-image': { Component: CropImageTool },
   'rotate-image': { Component: RotateImageTool },
   'reduce-image-quality': { Component: ReduceImageQualityTool },
@@ -90,6 +103,10 @@ export const toolRegistry = {
   'pdf-to-jpg': { Component: PdfToJpgTool },
   'pdf-to-png': { Component: PdfToJpgTool, props: { format: 'png' } },
   'reorder-pdf-pages': { Component: OrganizePdfTool },
+  'compress-pdf-to-100kb': { Component: CompressPdfTool, props: { presetKB: 100 } },
+  'compress-pdf-to-200kb': { Component: CompressPdfTool, props: { presetKB: 200 } },
+  'compress-pdf-to-300kb': { Component: CompressPdfTool, props: { presetKB: 300 } },
+  'compress-pdf-to-500kb': { Component: CompressPdfTool, props: { presetKB: 500 } },
   'merge-pdf': { Component: MergePdfTool },
   'compress-pdf': { Component: CompressPdfTool },
   'split-pdf': { Component: SplitPdfTool },
