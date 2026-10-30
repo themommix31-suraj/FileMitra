@@ -22,3 +22,6 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# AI models are downloaded by `npm run models` (too large for git)
+public/models/*.onnx

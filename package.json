@@ -6,10 +6,12 @@
   "scripts": {
     "dev": "vite",
     "sitemap": "node scripts/generate-sitemap.js",
-    "prebuild": "npm run sitemap",
+    "prebuild": "npm run sitemap && npm run models",
     "build": "vite build",
     "lint": "oxlint",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "models": "node scripts/fetch-models.mjs",
+    "predev": "npm run models"
   },
   "dependencies": {
     "browser-image-compression": "^2.0.2",
@@ -18,6 +20,7 @@
     "jsbarcode": "^3.12.3",
     "jszip": "^3.10.1",
     "lucide-react": "^1.30.0",
+    "onnxruntime-web": "^1.31.1",
     "pdf-lib": "^1.17.1",
     "pdfjs-dist": "^6.2.108",
     "qrcode": "^1.5.4",

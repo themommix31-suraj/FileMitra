@@ -43,7 +43,7 @@ src/
   components/   Reusable UI: Header, Footer, UploadDropzone, ToolCard, SEO, ...
   pages/        Route-level pages: Home, AllTools, CategoryPage, ToolPage, Blog, ...
   tools/
-    image/      Pure processing functions (compressImage, resizeImage, convertImage)
+    image/      Pure processing functions (compressImage, resizeImage, convertImage — supports JPG, PNG, WebP, BMP output)
     pdf/        Pure processing functions (imagesToPdf, pdfToJpg, mergePdf, compressPdf)
     ui/         The control-panel React component for each tool (sliders, upload, download)
     registry.jsx  Maps a tool slug -> { Component, props } — see below
@@ -146,3 +146,12 @@ tag — no other changes needed.
 (see `src/pages/ToolPage.jsx`) rather than a broken link, and are excluded
 from the sitemap until `implemented: true` is set. This keeps the site
 honest with users and search engines about what's actually usable today.
+
+## AI models (background remover, passport photos)
+
+The Background Remover and the "make background white" option in the photo tools run a
+U²-Net segmentation model (Apache-2.0) with `onnxruntime-web` (MIT), fully in the browser.
+The model files (~49 MB) are not stored in git. They are downloaded into `public/models/`
+automatically by `npm run dev` / `npm run build` (or manually with `npm run models`) and
+checked against pinned SHA-256 hashes. To skip the larger "Best quality" model, delete its
+entry from `BG_MODELS` in `src/tools/image/removeBackground.js`.
